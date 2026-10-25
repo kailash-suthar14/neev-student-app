@@ -1,56 +1,100 @@
-# Welcome to your Expo app 👋
+# Neev Survey (Expo / React Native)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A survey mobile app for iOS and Android built with Expo SDK 58, Expo Router and TypeScript (strict).
 
-## Get started
+Flow: **branded splash → mock login → survey landing → validated submission → saved-submission summary**.
 
-1. Install dependencies
+By default the app runs in **mock mode**. It works fully offline and stores data on the device with AsyncStorage. REST repositories for a future backend are included as tested placeholders.
 
-   ```bash
-   npm install
-   ```
+> ⚠️ Mock sign-in is for **development only**. It checks configurable demo credentials and is not real authentication.
 
-2. Start the app
+## Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js `^22.13.0` or `>=24` (React Native Testing Library 14 requires it). Tested with Node 24.
+- npm 10 or later.
+- One of:
+  - iOS: Xcode with an iOS Simulator (macOS only).
+  - Android: Android Studio with an emulator.
+  - A physical device with [Expo Go](https://expo.dev/go). This app uses only modules bundled in Expo Go.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Install
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env.local   # optional; defaults work without it
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+## Run
 
-### Other setup steps
+```bash
+npx expo start        # then press i (iOS) or a (Android), or scan the QR code
+npm run ios           # same as expo start --ios
+npm run android       # same as expo start --android
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Demo login (mock mode):
 
-## Learn more
+| Email              | Password   |
+| ------------------ | ---------- |
+| `demo@example.com` | `Demo123!` |
 
-To learn more about developing your project with Expo, look at the following resources:
+Change these with `EXPO_PUBLIC_DEMO_EMAIL` and `EXPO_PUBLIC_DEMO_PASSWORD`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Checks
 
-## Join the community
+```bash
+npm run typecheck     # tsc --noEmit
+npm run lint          # expo lint src tests (ESLint, including architecture-boundary rules)
+npm test              # Jest (jest-expo) + React Native Testing Library
+npm run check         # all three
+```
 
-Join our community of developers creating universal apps.
+## Configuration
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+All configuration comes from `EXPO_PUBLIC_*` environment variables. They are validated at startup in `src/config/env.ts`. See [`.env.example`](.env.example).
+
+| Variable                      | Default            | Notes                                     |
+| ----------------------------- | ------------------ | ----------------------------------------- |
+| `EXPO_PUBLIC_APP_NAME`        | `Neev Survey`      | Shown on splash, login and header         |
+| `EXPO_PUBLIC_DATA_MODE`       | `mock`             | `mock` or `rest`                          |
+| `EXPO_PUBLIC_API_BASE_URL`    | –                  | Required in `rest` mode                   |
+| `EXPO_PUBLIC_API_TIMEOUT_MS`  | `15000`            | REST timeout                              |
+| `EXPO_PUBLIC_MOCK_LATENCY_MS` | `400`              | Simulated latency in mock mode            |
+| `EXPO_PUBLIC_DEMO_EMAIL`      | `demo@example.com` | Mock login only                           |
+| `EXPO_PUBLIC_DEMO_PASSWORD`   | `Demo123!`         | Mock login only                           |
+
+`EXPO_PUBLIC_*` values are inlined into the JS bundle. Never put secrets in them. Restart the dev server after changing them; add `--clear` if a value seems stale.
+
+**Release builds** (`__DEV__` false) refuse to start unless `EXPO_PUBLIC_DATA_MODE` is set explicitly, and they reject `http://` API URLs. Set the mode in your EAS build profile's `env`.
+
+## Switching from mock to REST
+
+1. Agree the endpoint contract with the backend team. The proposed contract is in [docs/backend-api-contract.md](docs/backend-api-contract.md).
+2. Set the following in `.env.local`:
+   ```bash
+   EXPO_PUBLIC_DATA_MODE=rest
+   EXPO_PUBLIC_API_BASE_URL=https://your-api.example.com/v1
+   ```
+3. Restart `npx expo start --clear`.
+
+The composition root, `src/config/container.ts`, is the only place that chooses between implementations. Screens and services do not change. See [docs/architecture.md](docs/architecture.md) for the remaining production steps, such as secure token storage.
+
+## Project layout
+
+```
+src/app/            Expo Router routes (root layout, login, (app) group)
+src/components/     Reusable presentational UI
+src/features/       auth + surveys: models, validation, services, hooks
+src/data/           repositories (interfaces), local (AsyncStorage), mock, remote (REST)
+src/config/         env parsing, composition root, services context
+src/core/           errors, clock/id helpers, serial queue
+src/theme/          design tokens
+tests/              unit + integration tests
+docs/               architecture, API contract, testing
+```
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md): layers, data flow, persistence and security notes.
+- [docs/backend-api-contract.md](docs/backend-api-contract.md): the proposed REST endpoints.
+- [docs/testing.md](docs/testing.md): automated and manual testing.

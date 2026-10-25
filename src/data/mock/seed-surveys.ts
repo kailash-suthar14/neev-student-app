@@ -1,0 +1,97 @@
+import type { Survey } from '@/features/surveys/models';
+
+export const LEARNING_EXPERIENCE_SURVEY: Survey = {
+  id: 'survey_learning_experience',
+  version: 1,
+  title: 'Learning Experience Survey',
+  description:
+    'Help us improve your classes. Your answers take about three minutes and are used only to improve teaching and support.',
+  estimatedMinutes: 3,
+  questions: [
+    {
+      id: 'q_course_level',
+      type: 'single_select',
+      order: 1,
+      required: true,
+      prompt: 'Which programme are you currently enrolled in?',
+      options: [
+        { id: 'foundation', label: 'Foundation' },
+        { id: 'intermediate', label: 'Intermediate' },
+        { id: 'advanced', label: 'Advanced' },
+        { id: 'exam_prep', label: 'Exam preparation' },
+      ],
+    },
+    {
+      id: 'q_helpful_resources',
+      type: 'multi_select',
+      order: 2,
+      required: true,
+      prompt: 'Which resources have helped you most?',
+      description: 'Select up to three.',
+      maxSelections: 3,
+      options: [
+        { id: 'live_classes', label: 'Live classes' },
+        { id: 'recorded_lectures', label: 'Recorded lectures' },
+        { id: 'practice_tests', label: 'Practice tests' },
+        { id: 'study_notes', label: 'Study notes' },
+        { id: 'doubt_sessions', label: 'Doubt-clearing sessions' },
+      ],
+    },
+    {
+      id: 'q_study_hours',
+      type: 'number',
+      order: 3,
+      required: true,
+      prompt: 'On average, how many hours do you study outside class each week?',
+      min: 0,
+      max: 80,
+      integer: true,
+      unit: 'hours',
+      placeholder: 'e.g. 10',
+    },
+    {
+      id: 'q_overall_rating',
+      type: 'rating',
+      order: 4,
+      required: true,
+      prompt: 'How would you rate your overall learning experience?',
+      scale: 5,
+      minLabel: 'Poor',
+      maxLabel: 'Excellent',
+    },
+    {
+      id: 'q_favourite_topic',
+      type: 'short_text',
+      order: 5,
+      required: false,
+      prompt: 'Which topic have you enjoyed the most so far?',
+      maxLength: 80,
+      placeholder: 'e.g. Algebra',
+    },
+    {
+      id: 'q_improvements',
+      type: 'long_text',
+      order: 6,
+      required: false,
+      prompt: 'What one thing could we do to improve your classes?',
+      description: 'Please avoid sharing personal or contact details.',
+      minLength: 10,
+      maxLength: 500,
+      placeholder: 'Share your suggestions…',
+    },
+    {
+      id: 'q_recommend',
+      type: 'single_select',
+      order: 7,
+      required: true,
+      prompt: 'Would you recommend these classes to a friend?',
+      options: [
+        { id: 'yes', label: 'Yes' },
+        { id: 'maybe', label: 'Maybe' },
+        { id: 'no', label: 'No' },
+      ],
+    },
+  ],
+};
+
+export const SEED_SURVEYS: readonly Survey[] = [LEARNING_EXPERIENCE_SURVEY];
