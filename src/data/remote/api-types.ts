@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import { userSchema } from '@/features/auth/models';
 import {
   surveyAnswerSchema,
   surveySchema,
@@ -33,19 +32,25 @@ export const apiErrorBodySchema = z.object({ error: apiErrorSchema });
 
 // ---- DTOs (see docs/backend-api-contract.md) ----
 
-export interface LoginRequestDto {
-  email: string;
-  password: string;
-}
+/**
+ * `POST /api/firebase-auth-token` success body. The session token itself
+ * arrives in the `X-Auth-Token` response header. Values are strings ("true").
+ */
+export const firebaseAuthTokenResponseDtoSchema = z.object({
+  status: z.string().optional(),
+  deviceConflict: z.string().optional(),
+});
 
-export const loginResponseDtoSchema = apiResponseSchema(
-  z.object({
-    user: userSchema,
-    accessToken: z.string().min(1),
-    expiresAt: z.iso.datetime(),
-  }),
-);
-export type LoginResponseDto = z.infer<typeof loginResponseDtoSchema>;
+/** `GET /api/accountInfo` (AccountInfo DTO in glsservices). Only the fields the app reads. */
+export const accountInfoDtoSchema = z.object({
+  username: z.string().nullish(),
+  name: z.string().nullish(),
+  email: z.string().nullish(),
+  roles: z.array(z.string()).nullish(),
+  authorities: z.array(z.string()).nullish(),
+  isActive: z.boolean().nullish(),
+});
+export type AccountInfoDto = z.infer<typeof accountInfoDtoSchema>;
 
 export const surveyListResponseDtoSchema = apiResponseSchema(z.array(surveySummarySchema));
 export const surveyResponseDtoSchema = apiResponseSchema(surveySchema);

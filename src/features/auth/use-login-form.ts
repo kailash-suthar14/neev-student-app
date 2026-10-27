@@ -6,7 +6,7 @@ import { useAuth } from './auth-context';
 import type { LoginFieldErrors } from './validation';
 
 export function useLoginForm() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, supportsGoogleSignIn } = useAuth();
   const [email, setEmailValue] = useState('');
   const [password, setPasswordValue] = useState('');
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
@@ -49,5 +49,32 @@ export function useLoginForm() {
     }
   };
 
-  return { email, password, setEmail, setPassword, fieldErrors, formError, submitting, submit };
+  const submitGoogle = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      // Resolves without a session when the picker is dismissed; nothing to show then.
+      await signInWithGoogle();
+    } catch (raw) {
+      setFormError(getUserMessage(raw));
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  return {
+    email,
+    password,
+    setEmail,
+    setPassword,
+    fieldErrors,
+    formError,
+    submitting,
+    submit,
+    supportsGoogleSignIn,
+    submitGoogle,
+  };
 }

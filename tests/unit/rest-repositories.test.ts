@@ -1,81 +1,20 @@
 import { ApiClient } from '@/data/remote/api-client';
-import { RestAuthRepository } from '@/data/remote/rest-auth-repository';
+import { RestAccountRepository } from '@/data/remote/rest-account-repository';
 import { RestSubmissionRepository } from '@/data/remote/rest-submission-repository';
 import { RestSurveyRepository } from '@/data/remote/rest-survey-repository';
-import { InMemoryTokenStore } from '@/data/remote/token-store';
 import { LEARNING_EXPERIENCE_SURVEY as survey } from '@/data/mock/seed-surveys';
 import { toSurveySummary } from '@/features/surveys/models';
 
-import { fixedClock, makeSubmission } from '../helpers/fixtures';
+import { makeSubmission } from '../helpers/fixtures';
 import { createMockFetch, jsonResponse } from '../helpers/http';
 
 type Responders = Parameters<typeof createMockFetch>;
 
 function setup(...responders: Responders) {
   const { fetchFn, requests } = createMockFetch(...responders);
-  const tokens = new InMemoryTokenStore();
-  const client = new ApiClient({
-    baseUrl: 'https://api.test',
-    timeoutMs: 1000,
-    fetchFn,
-    getAccessToken: () => tokens.get(),
-    onUnauthorized: () => tokens.clear(),
-  });
-  return { client, tokens, requests, fetchFn };
+  const client = new ApiClient({ baseUrl: 'https://api.test', timeoutMs: 1000, fetchFn });
+  return { client, requests, fetchFn };
 }
-
-const loginOk = () =>
-  jsonResponse(200, {
-    data: {
-      user: { id: 'u1', email: 'a@b.com', displayName: 'A' },
-      accessToken: 'tok_123',
-      expiresAt: '2026-02-01T00:00:00.000Z',
-    },
-  });
-
-describe('RestAuthRepository', () => {
-  it('logs in, keeps the token in memory and returns a session', async () => {
-    const { client, tokens, requests } = setup(loginOk);
-    const repo = new RestAuthRepository(client, tokens, fixedClock());
-
-    const session = await repo.login({ email: 'a@b.com', password: 'pw' });
-
-    expect(requests[0]).toMatchObject({ url: 'https://api.test/auth/login', method: 'POST' });
-    expect(requests[0].headers.Authorization).toBeUndefined();
-    expect(session).toMatchObject({ mode: 'rest', user: { id: 'u1' } });
-    expect(tokens.get()).toBe('tok_123');
-    await expect(repo.getCurrentSession()).resolves.toEqual(session);
-  });
-
-  it('maps a 401 from login to invalid_credentials', async () => {
-    const { client, tokens } = setup(() => jsonResponse(401));
-    await expect(
-      new RestAuthRepository(client, tokens).login({ email: 'a@b.com', password: 'x' }),
-    ).rejects.toMatchObject({ code: 'invalid_credentials' });
-  });
-
-  it('clears local credentials on logout even if the server call fails', async () => {
-    const { client, tokens } = setup(loginOk, () => {
-      throw new TypeError('offline');
-    });
-    const repo = new RestAuthRepository(client, tokens, fixedClock());
-    await repo.login({ email: 'a@b.com', password: 'pw' });
-    await expect(repo.logout()).resolves.toBeUndefined();
-    expect(tokens.get()).toBeNull();
-    await expect(repo.getCurrentSession()).resolves.toBeNull();
-  });
-
-  it('sends the bearer token on logout', async () => {
-    const { client, tokens, requests } = setup(loginOk, () => new Response(null, { status: 204 }));
-    const repo = new RestAuthRepository(client, tokens, fixedClock());
-    await repo.login({ email: 'a@b.com', password: 'pw' });
-    await repo.logout();
-    expect(requests[1]).toMatchObject({
-      url: 'https://api.test/auth/logout',
-      headers: { Authorization: 'Bearer tok_123' },
-    });
-  });
-});
 
 describe('RestSurveyRepository', () => {
   it('lists surveys and fetches one by encoded id', async () => {
@@ -164,6 +103,52 @@ describe('RestSubmissionRepository', () => {
     const { client } = setup(() => jsonResponse(500));
     await expect(new RestSubmissionRepository(client).getById('x')).rejects.toMatchObject({
       code: 'server',
+    });
+  });
+});
+
+describe('RestAccountRepository', () => {
+  it('loads /api/accountInfo with the session token and maps missing fields', async () => {
+    const { fetchFn, requests } = createMockFetch(() =>
+      jsonResponse(200, {
+        username: 'asha01',
+        name: 'Asha',
+        email: 'asha@example.com',
+        tokenExpiry: null,
+        attributes: null,
+        roles: ['student'],
+        authorities: ['VIEW_COURSES', 'TAKE_TESTS'],
+        isActive: true,
+      }),
+    );
+    const client = new ApiClient({
+      baseUrl: 'https://api.test',
+      timeoutMs: 1000,
+      fetchFn,
+      getAccessToken: () => 'session-1',
+    });
+
+    await expect(new RestAccountRepository(client).getAccountInfo()).resolves.toEqual({
+      username: 'asha01',
+      name: 'Asha',
+      email: 'asha@example.com',
+      roles: ['student'],
+      authorities: ['VIEW_COURSES', 'TAKE_TESTS'],
+      isActive: true,
+    });
+    expect(requests[0].url).toBe('https://api.test/api/accountInfo');
+    expect(requests[0].headers['X-Auth-Token']).toBe('session-1');
+  });
+
+  it('defaults absent fields instead of failing', async () => {
+    const { client } = setup(() => jsonResponse(200, { email: 'asha@example.com' }));
+    await expect(new RestAccountRepository(client).getAccountInfo()).resolves.toEqual({
+      username: null,
+      name: null,
+      email: 'asha@example.com',
+      roles: [],
+      authorities: [],
+      isActive: null,
     });
   });
 });

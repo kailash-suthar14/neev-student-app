@@ -12,10 +12,12 @@ import {
   type AuthContextValue,
 } from '@/features/auth/auth-context';
 
+import { accountInfo, exchangeOk, FakeFirebaseAuth, STUDENT_USER } from '../helpers/firebase';
 import { FailingStorage } from '../helpers/fixtures';
+import { createMockFetch, jsonResponse } from '../helpers/http';
 
 function wrapperFor(storage = new InMemoryStorage() as InMemoryStorage | FailingStorage) {
-  const services = createAppServices(parseAppConfig({ EXPO_PUBLIC_MOCK_LATENCY_MS: '0' }), { storage });
+  const services = createAppServices(parseAppConfig({ EXPO_PUBLIC_DATA_MODE: 'mock', EXPO_PUBLIC_MOCK_LATENCY_MS: '0' }), { storage });
   return function Wrapper({ children }: PropsWithChildren) {
     return (
       <AppServicesProvider services={services}>
@@ -85,5 +87,58 @@ describe('AuthProvider', () => {
       status: 'signed_out',
       notice: 'Your session has expired. Please sign in again.',
     });
+  });
+});
+
+describe('AuthProvider with Firebase sign-in (REST mode)', () => {
+  function restWrapper(
+    firebase: FakeFirebaseAuth,
+    secureStorage: InMemoryStorage,
+    ...responders: Parameters<typeof createMockFetch>
+  ) {
+    const { fetchFn } = createMockFetch(...responders);
+    const services = createAppServices(
+      parseAppConfig({ EXPO_PUBLIC_DATA_MODE: 'rest', EXPO_PUBLIC_API_BASE_URL: 'https://api.test' }),
+      { storage: new InMemoryStorage(), secureStorage, fetchFn, firebaseAuth: firebase },
+    );
+    return function Wrapper({ children }: PropsWithChildren) {
+      return (
+        <AppServicesProvider services={services}>
+          <AuthProvider>{children}</AuthProvider>
+        </AppServicesProvider>
+      );
+    };
+  }
+
+  it('explains a sign-out caused by another device signing in', async () => {
+    const firebase = new FakeFirebaseAuth();
+    firebase.user = STUDENT_USER;
+    const wrapper = restWrapper(firebase, new InMemoryStorage(), () =>
+      jsonResponse(409, { errorCode: 'DEVICE_CONFLICT' }),
+    );
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() =>
+      expect(result.current.state).toEqual({
+        status: 'signed_out',
+        notice:
+          'You’ve been signed out because your account was signed in on another device. Please sign in again to continue.',
+      }),
+    );
+  });
+
+  it('signs in with Google and stays signed out when the picker is dismissed', async () => {
+    const firebase = new FakeFirebaseAuth();
+    const wrapper = restWrapper(firebase, new InMemoryStorage(), () => exchangeOk('g1'), () => accountInfo());
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.state.status).toBe('signed_out'));
+    expect(result.current.supportsGoogleSignIn).toBe(true);
+
+    firebase.googleUser = null;
+    await act(() => result.current.signInWithGoogle());
+    expect(result.current.state.status).toBe('signed_out');
+
+    firebase.googleUser = STUDENT_USER;
+    await act(() => result.current.signInWithGoogle());
+    expect(result.current.state).toMatchObject({ status: 'signed_in', session: { user: { id: STUDENT_USER.uid } } });
   });
 });

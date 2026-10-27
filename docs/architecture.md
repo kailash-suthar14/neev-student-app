@@ -18,7 +18,7 @@ src/config/container.ts ──┴──▶ src/data/{mock,local,remote} (impleme
 
   | Interface              | Mock                                         | REST                       |
   | ---------------------- | -------------------------------------------- | -------------------------- |
-  | `AuthRepository`       | `MockAuthRepository` (+ `SessionStore`)      | `RestAuthRepository`       |
+  | `AuthRepository`       | `MockAuthRepository` (+ `SessionStore`)      | `FirebaseAuthRepository` (Firebase Auth + backend session) |
   | `SurveyRepository`     | `MockSurveyRepository` (seed data)           | `RestSurveyRepository`     |
   | `SubmissionRepository` | `MockSubmissionRepository` (+ `LocalSubmissionStore`) | `RestSubmissionRepository` |
   | `DraftRepository`      | `LocalDraftRepository`, always local in both modes | –                    |
@@ -79,20 +79,27 @@ Submit button ──▶ useSurveyForm.submit
 ## REST layer
 
 - `ApiClient` (`src/data/remote/api-client.ts`) handles:
-  - base URL joining, `Accept` and `Content-Type` headers, and an optional bearer token
+  - base URL joining, `Accept` and `Content-Type` headers, and the `X-Auth-Token` session header (token read from secure storage)
   - timeout via `AbortController`, also covering the body read, plus caller cancellation
-  - JSON parsing, HTTP status mapping to `AppError` codes, Zod validation of responses, and a 401 callback
-- It never logs bodies, tokens or passwords. Error messages contain only the method, path and status. Messages shown to users come from `getUserMessage(code)`, never from raw server text.
+  - JSON parsing, HTTP status mapping to `AppError` codes, Zod validation of responses, one silent re-authentication and retry on 401 (concurrent 401s share it), and a callback for unrecovered 401s
+- It never logs bodies, tokens or passwords. Error messages contain only the method, path (without the query string, which can carry the Firebase ID token) and status. Messages shown to users come from `getUserMessage(code)`, never from raw server text.
 - `RestSubmissionRepository.create` resolves only on a 2xx response carrying the same submission. Any failure propagates, with **no local fallback**. The form keeps its answers, and the user sees an error and can retry with the same idempotency key.
-- **Tokens**: `InMemoryTokenStore` keeps the access token in memory only, so in REST mode the user signs in again after an app restart. For persistent sign-in, implement `TokenStore` with `expo-secure-store` (Keychain/Keystore) and restore the session from it in `RestAuthRepository.getCurrentSession`.
-- **401 handling**: the client clears the token. The survey and submission-detail hooks call `expireSession()`, which returns the user to login with a notice.
+- **Sign-in (REST mode)**: `FirebaseAuthRepository` ports the mentor app's login:
+  1. Firebase email/password, or Google on Android (`FirebaseAuthGateway` wraps `@react-native-firebase/auth` and `@react-native-google-signin/google-signin`; tests inject a fake).
+  2. `POST /api/firebase-auth-token?firebaseAuthToken=…&deviceId=…&forceTakeover=…` against glsstudentapi. The `X-Auth-Token` response header is the backend session id.
+  3. `GET /api/accountInfo`, which must list the `student` role.
+
+  The backend also enforces the role: glsstudentapi runs with `application.role: student` and answers `401` (`wrong_role`) for other user types and `403` (`not_registered`) for unknown accounts. Any failure signs out of Firebase too, so a rejected account is not restored on the next launch.
+- **Tokens**: `AuthCredentialStore` keeps the `X-Auth-Token`, a per-install device id and the "signed in on another device" flag in `expo-secure-store` (Keychain/Keystore), never AsyncStorage. `SessionStore` holds only the non-sensitive session record. Restore re-exchanges the persisted Firebase sign-in. If the backend is unreachable, the stored session is kept so offline users are not sent back to login.
+- **401 handling**: `ApiClient` asks `FirebaseAuthRepository.reauthenticate()` for a fresh token (`forceTakeover=false`) and retries once. If that fails, the token is cleared; on `409` (another device took over) Firebase is signed out and the flag is set. The survey and submission-detail hooks then call `expireSession()`, which returns the user to login with a notice explaining the reason.
+- **Single-device login**: the client sends `deviceId` and `forceTakeover` like the mentor app, but glsstudentapi's `/api/firebase-auth-token` currently ignores both: it never returns `409` or `deviceConflict`, and instead deletes the student's other sessions. Until the student endpoint adopts the mentor endpoint's `SingleDeviceSessionService` handling, two devices can silently take the session back from each other through re-authentication.
 - **409 conflict** is shown as "This conflicts with newer data. Please reload and try again." It never says the response was saved. Telling an outdated survey version apart from other conflicts by the server's error `code` is a backend-integration task.
 
 ## Configuration safety
 
 `parseAppConfig` (`src/config/env.ts`) validates every variable. In release builds (`__DEV__ === false`) it also:
 
-- requires `EXPO_PUBLIC_DATA_MODE` to be set explicitly, so a release can never fall back to mock login by accident;
+- refuses `EXPO_PUBLIC_DATA_MODE=mock`, so the demo login can never ship (REST, the real sign-in, is the default);
 - rejects a plain `http://` API base URL.
 
 An invalid configuration shows a branded "Unable to start" screen.

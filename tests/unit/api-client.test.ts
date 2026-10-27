@@ -25,13 +25,13 @@ describe('ApiClient', () => {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        Authorization: 'Bearer secret-token',
+        'X-Auth-Token': 'secret-token',
       },
       body: { a: 1 },
     });
   });
 
-  it('omits Content-Type without a body and Authorization for unauthenticated calls', async () => {
+  it('omits Content-Type without a body and the session token for unauthenticated calls', async () => {
     const { fetchFn, requests } = createMockFetch(() => jsonResponse(200, { data: { id: 'x' } }));
     await client(fetchFn, { getAccessToken: () => 't' }).request({
       method: 'GET',
@@ -93,6 +93,95 @@ describe('ApiClient', () => {
       client(fetchFn, { onUnauthorized }).request({ method: 'GET', path: '/x', schema: itemSchema }),
     ).rejects.toMatchObject({ code: 'unauthorized' });
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  describe('re-authentication after a 401', () => {
+    it('reads an async token and exposes response headers', async () => {
+      const { fetchFn, requests } = createMockFetch(
+        () => new Response(JSON.stringify({ data: { id: 'x' } }), { status: 200, headers: { 'X-Auth-Token': 'next' } }),
+      );
+      const result = await client(fetchFn, { getAccessToken: async () => 'stored' }).send({
+        method: 'GET',
+        path: '/items',
+        schema: itemSchema,
+      });
+      expect(requests[0].headers['X-Auth-Token']).toBe('stored');
+      expect(result.headers.get('x-auth-token')).toBe('next');
+    });
+
+    it('retries once with the fresh token', async () => {
+      const reauthenticate = jest.fn(async () => 'fresh');
+      const onUnauthorized = jest.fn();
+      const { fetchFn, requests } = createMockFetch(
+        () => jsonResponse(401),
+        () => jsonResponse(200, { data: { id: 'x' } }),
+      );
+      const api = client(fetchFn, { getAccessToken: () => 'stale', reauthenticate, onUnauthorized });
+
+      await expect(api.request({ method: 'GET', path: '/items', schema: itemSchema })).resolves.toEqual({
+        data: { id: 'x' },
+      });
+      expect(requests.map((r) => r.headers['X-Auth-Token'])).toEqual(['stale', 'fresh']);
+      expect(reauthenticate).toHaveBeenCalledTimes(1);
+      expect(onUnauthorized).not.toHaveBeenCalled();
+    });
+
+    it('shares one re-authentication between concurrent 401s', async () => {
+      let release: (token: string) => void = () => undefined;
+      const reauthenticate = jest.fn(() => new Promise<string>((resolve) => (release = resolve)));
+      const { fetchFn } = createMockFetch(
+        () => jsonResponse(401),
+        () => jsonResponse(401),
+        () => jsonResponse(200, { data: { id: 'a' } }),
+        () => jsonResponse(200, { data: { id: 'b' } }),
+      );
+      const api = client(fetchFn, { getAccessToken: () => 'stale', reauthenticate });
+
+      const both = Promise.all([
+        api.request({ method: 'GET', path: '/a', schema: itemSchema }),
+        api.request({ method: 'GET', path: '/b', schema: itemSchema }),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      release('fresh');
+      await expect(both).resolves.toHaveLength(2);
+      expect(reauthenticate).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports the 401 when re-authentication fails', async () => {
+      const onUnauthorized = jest.fn();
+      const { fetchFn } = createMockFetch(() => jsonResponse(401));
+      const api = client(fetchFn, {
+        getAccessToken: () => 'stale',
+        reauthenticate: async () => {
+          throw new Error('exchange failed');
+        },
+        onUnauthorized,
+      });
+      await expect(api.request({ method: 'GET', path: '/x', schema: itemSchema })).rejects.toMatchObject({
+        code: 'unauthorized',
+      });
+      expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not re-authenticate unauthenticated or opted-out requests', async () => {
+      const reauthenticate = jest.fn(async () => 'fresh');
+      const { fetchFn } = createMockFetch(() => jsonResponse(401), () => jsonResponse(401));
+      const api = client(fetchFn, { getAccessToken: () => 't', reauthenticate });
+      await expect(
+        api.request({ method: 'POST', path: '/login', schema: itemSchema, authenticated: false }),
+      ).rejects.toMatchObject({ code: 'unauthorized' });
+      await expect(
+        api.request({ method: 'GET', path: '/logout', schema: itemSchema, reauthenticate: false }),
+      ).rejects.toMatchObject({ code: 'unauthorized' });
+      expect(reauthenticate).not.toHaveBeenCalled();
+    });
+
+    it('keeps query strings, which may hold credentials, out of error messages', async () => {
+      const { fetchFn } = createMockFetch(() => jsonResponse(500));
+      await expect(
+        client(fetchFn).request({ method: 'POST', path: '/token?firebaseAuthToken=secret', schema: itemSchema }),
+      ).rejects.toMatchObject({ message: expect.not.stringContaining('secret') });
+    });
   });
 
   it('maps fetch rejections to network errors', async () => {

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { View, type TextInputInstance } from 'react-native';
+import { Platform, View, type TextInputInstance } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Banner } from '@/components/banner';
@@ -20,6 +20,9 @@ export default function LoginScreen() {
   const { spacing } = useTheme();
   const passwordRef = useRef<TextInputInstance>(null);
   const isMock = config.dataMode === 'mock';
+  // Android only: App Store guideline 4.8 would require Sign in with Apple
+  // alongside a third-party login, and accounts are provisioned as email/password.
+  const showGoogle = form.supportsGoogleSignIn && Platform.OS === 'android';
   const notice = state.status === 'signed_out' ? state.notice : undefined;
 
   return (
@@ -30,7 +33,7 @@ export default function LoginScreen() {
           {config.appName}
         </AppText>
         <AppText tone="muted" style={{ textAlign: 'center' }}>
-          Sign in to take your survey.
+          Sign in to continue.
         </AppText>
       </View>
 
@@ -85,6 +88,21 @@ export default function LoginScreen() {
           loading={form.submitting}
           onPress={() => void form.submit()}
         />
+        {showGoogle ? (
+          <>
+            <AppText tone="muted" style={{ textAlign: 'center' }}>
+              or continue with
+            </AppText>
+            <Button
+              variant="secondary"
+              label="Sign in with Google"
+              loadingLabel="Signing in…"
+              loading={form.submitting}
+              onPress={() => void form.submitGoogle()}
+              testID="google-sign-in"
+            />
+          </>
+        ) : null}
       </Card>
     </Screen>
   );

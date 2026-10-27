@@ -6,7 +6,7 @@
 
 - Base URL: `EXPO_PUBLIC_API_BASE_URL`, for example `https://api.example.com/v1`.
 - Requests send `Accept: application/json`. Requests with a body also send `Content-Type: application/json`.
-- Authenticated requests send `Authorization: Bearer <accessToken>`.
+- Authenticated requests send `X-Auth-Token: <session id>` (Spring Session `HeaderHttpSessionIdResolver`).
 - Timestamps are ISO 8601 UTC, for example `2026-01-15T10:00:00.000Z`. IDs are opaque strings of 1–128 characters.
 - Successful responses use the envelope `{ "data": <payload>, "meta": { "requestId": "..." } }`. `meta` is optional.
 - Error responses use the envelope:
@@ -23,8 +23,8 @@
 | ------------- | --------------- | ------------------------------------------------------- |
 | 2xx           | –               | Response validated against a schema; a mismatch gives `invalid_response` |
 | 400, 422      | `validation`    | Inline errors from `details`                            |
-| 401           | `unauthorized`  | Token cleared, user returned to login (`invalid_credentials` on `/auth/login`) |
-| 403           | `forbidden`     | Error message                                           |
+| 401           | `unauthorized`  | One silent re-authentication and retry; then token cleared and user returned to login (`wrong_role` on `/api/firebase-auth-token`) |
+| 403           | `forbidden`     | Error message (`not_registered` on `/api/firebase-auth-token`) |
 | 404           | `not_found`     | `GET /submissions/:id` returns `null`; otherwise an error |
 | 409           | `conflict`      | Error message                                           |
 | 5xx           | `server`        | Error message; answers kept for retry                   |
@@ -57,33 +57,26 @@ Optional questions that were left blank are omitted from `answers`.
 
 ---
 
-## POST /auth/login
+## Authentication (existing glsstudentapi endpoints, not proposed)
 
-Unauthenticated.
+The app signs in with Firebase first, then exchanges the Firebase ID token for a backend session. These endpoints exist today in `StudentAccountResource` and do **not** use the `{ "data": … }` envelope.
 
-Request:
+### POST /api/firebase-auth-token?firebaseAuthToken=…&deviceId=…&forceTakeover=…
 
-```json
-{ "email": "student@example.com", "password": "••••••••" }
-```
+Unauthenticated. No body. `forceTakeover` is `true` for an interactive sign-in and `false` for a session restore or a silent re-authentication. glsstudentapi currently ignores `deviceId` and `forceTakeover`; glsmentorapi implements them.
 
-`200` response:
+- `200`: `{ "status": "true" }` (mentor API also sends `"deviceConflict": "true" | "false"`). The session id is in the **`X-Auth-Token` response header**; a missing header gives `invalid_response`.
+- `401`: `{ "status": "false", "url": "<portal>" }`. The account's user type is not `student` → `wrong_role`.
+- `403`: no backend user for this Firebase account → `not_registered`.
+- `409`: another device holds the session (mentor API only, with `forceTakeover=false`) → `device_conflict`.
 
-```json
-{
-  "data": {
-    "user": { "id": "user_123", "email": "student@example.com", "displayName": "Asha K" },
-    "accessToken": "opaque-or-jwt",
-    "expiresAt": "2026-01-22T10:00:00.000Z"
-  }
-}
-```
+### GET /api/accountInfo
 
-`401` means invalid credentials. The app holds the token in memory only.
+Authenticated. `{ "username", "name", "email", "roles": ["student"], "authorities": [...], "isActive" }`. The app requires `roles` to include `student`.
 
-## POST /auth/logout
+### GET /api/logout
 
-Authenticated. No body. Response: `204 No Content`. This should revoke the token. The app clears local credentials even if this call fails.
+Authenticated. Invalidates the session. Called before local credentials are cleared, best effort, without re-authenticating.
 
 ## GET /surveys
 

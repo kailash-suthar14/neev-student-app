@@ -1,0 +1,255 @@
+{
+  "project_info": {
+    "project_number": "865517437629",
+    "firebase_url": "https://deeple-80bdf.firebaseio.com",
+    "project_id": "deeple-80bdf",
+    "storage_bucket": "deeple-80bdf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865517437629:android:0365eebd5d5fdebf0cedd4",
+        "android_client_info": {
+          "package_name": "com.deeple.mentor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865517437629-5voch9t8a86jq9gmsfog9g5b1pg09oah.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.deeple.mentor",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "865517437629-ig6bsl6803feens1fgpobdcjno3fvk7a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.deeple.mentor",
+            "certificate_hash": "819d4b702bd76b5bb37f34596362d9f93efc9407"
+          }
+        },
+        {
+          "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDswCM8o85tXf_2E7TXWTr6exS9zB_ylRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "865517437629-07s8c55auvsbashd0m8ctu0hthm27qkh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deeple.mentor"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865517437629:android:029004ddfd272a050cedd4",
+        "android_client_info": {
+          "package_name": "com.deeple.testApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDswCM8o85tXf_2E7TXWTr6exS9zB_ylRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "865517437629-07s8c55auvsbashd0m8ctu0hthm27qkh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deeple.mentor"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865517437629:android:325538382d4b7e330cedd4",
+        "android_client_info": {
+          "package_name": "com.sensei.gls.mentor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865517437629-35s179ggd58spo6pbmpfpmk927t2ti1p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor",
+            "certificate_hash": "03e55db8d53bcd5a1034406e062de3dd23f985cd"
+          }
+        },
+        {
+          "client_id": "865517437629-knabls65f01j7e43o4rp2plv50jhfdrc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor",
+            "certificate_hash": "f3066bc8652ea2721dabd4b82ebb42190f092fe3"
+          }
+        },
+        {
+          "client_id": "865517437629-qdf9bjk1bff7v0uiijj1aormldusg732.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor",
+            "certificate_hash": "e7b74a9f2186a82f589dc73408b127b4d06a28d2"
+          }
+        },
+        {
+          "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDswCM8o85tXf_2E7TXWTr6exS9zB_ylRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "865517437629-07s8c55auvsbashd0m8ctu0hthm27qkh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deeple.mentor"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865517437629:android:ddee845cc4c5f5cd0cedd4",
+        "android_client_info": {
+          "package_name": "com.sensei.gls.mentor.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865517437629-jj29505nu3j4n0guntg6c3jj4m4pi2vr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor.debug",
+            "certificate_hash": "23221bca8f363a2e7b9994fd3d8e5746e9821f23"
+          }
+        },
+        {
+          "client_id": "865517437629-lbnmbughdv34sgqr1g5lo99rlg6188u7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor.debug",
+            "certificate_hash": "f3066bc8652ea2721dabd4b82ebb42190f092fe3"
+          }
+        },
+        {
+          "client_id": "865517437629-p4jppprehmcgheverg57kk6uccsgdgvo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sensei.gls.mentor.debug",
+            "certificate_hash": "5abeab32736b15be6fea0cd05bb93159467918c4"
+          }
+        },
+        {
+          "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDswCM8o85tXf_2E7TXWTr6exS9zB_ylRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "865517437629-07s8c55auvsbashd0m8ctu0hthm27qkh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deeple.mentor"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865517437629:android:820076090cbde0110cedd4",
+        "android_client_info": {
+          "package_name": "com.sensei.gls.mentor.uat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDswCM8o85tXf_2E7TXWTr6exS9zB_ylRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "865517437629-07s8c55auvsbashd0m8ctu0hthm27qkh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deeple.mentor"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,6 +5,7 @@
  * All methods reject with an `AppError` on failure. None of them report
  * success unless the underlying store or server has confirmed the operation.
  */
+import type { AccountInfo } from '@/features/account/models';
 import type { AuthSession, LoginCredentials } from '@/features/auth/models';
 import type {
   Survey,
@@ -16,9 +17,24 @@ import type {
 export interface AuthRepository {
   /** Rejects with `invalid_credentials` when the credentials are not accepted. */
   login(credentials: LoginCredentials): Promise<AuthSession>;
+  /**
+   * Google account sign-in, where supported. Resolves null when the user
+   * dismisses the account picker.
+   */
+  loginWithGoogle?(): Promise<AuthSession | null>;
   logout(): Promise<void>;
   /** Returns the persisted session, or null when none exists or it has expired. */
   getCurrentSession(): Promise<AuthSession | null>;
+  /**
+   * True once after this device was signed out because the account signed in
+   * on another device. Reading it clears it.
+   */
+  consumeForcedSignOut?(): Promise<boolean>;
+}
+
+export interface AccountRepository {
+  /** The signed-in user's account. Rejects with `unauthorized` when the session has ended. */
+  getAccountInfo(): Promise<AccountInfo>;
 }
 
 export interface SurveyRepository {

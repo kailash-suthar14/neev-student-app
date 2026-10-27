@@ -15,6 +15,18 @@ export const StorageKeys = {
   drafts: key('drafts'),
 } as const;
 
+/**
+ * Keys for expo-secure-store (Keychain/Keystore). SecureStore only accepts
+ * alphanumerics, `.`, `-` and `_`, so these use dots instead of colons.
+ */
+const secureKey = (name: string) => `${STORAGE_NAMESPACE}.${STORAGE_KEY_VERSION}.${name}`;
+
+export const SecureStorageKeys = {
+  xAuthToken: secureKey('x-auth-token'),
+  deviceId: secureKey('device-id'),
+  forcedSignOut: secureKey('forced-sign-out'),
+} as const;
+
 /** Unreadable data is moved here instead of being overwritten, so it can be recovered. */
 export function quarantineKey(baseKey: string, timestamp: number): string {
   return `${baseKey}:quarantine:${timestamp}`;

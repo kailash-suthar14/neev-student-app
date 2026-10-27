@@ -6,6 +6,13 @@
 export type AppErrorCode =
   | 'validation'
   | 'invalid_credentials'
+  | 'rate_limited'
+  | 'sign_in_failed'
+  | 'not_registered'
+  | 'wrong_role'
+  | 'device_conflict'
+  | 'google_config'
+  | 'play_services'
   | 'unauthorized'
   | 'forbidden'
   | 'not_found'
@@ -55,6 +62,15 @@ export function toAppError(value: unknown, fallbackMessage = 'Something went wro
 const USER_MESSAGES: Record<AppErrorCode, string> = {
   validation: 'Please check the highlighted fields.',
   invalid_credentials: 'The email or password is incorrect.',
+  rate_limited: 'Too many failed attempts. Please try again later.',
+  sign_in_failed: 'Sign in failed. Please try again.',
+  not_registered: 'You are not a registered user.',
+  wrong_role: 'This app is for students only. Please sign in with a student account.',
+  device_conflict:
+    'You’ve been signed out because your account was signed in on another device. Please sign in again to continue.',
+  google_config:
+    'Google Sign-In configuration error. Ensure the app SHA-1 is registered in Firebase Console.',
+  play_services: 'Google Play Services is not available on this device.',
   unauthorized: 'Your session has expired. Please sign in again.',
   forbidden: 'You do not have permission to do that.',
   not_found: 'The requested item could not be found.',

@@ -30,7 +30,7 @@ npm run check         # typecheck + lint + tests
 | Survey loading, empty state, validation errors, persistence before success, duplicate-submit collapse, **retry of the same attempt is identical even as the clock moves**, storage failure keeps the draft, per-user drafts and submissions | `tests/unit/survey-service.test.ts` |
 | ApiClient headers, auth, 204, status mapping, error details, 401 callback, network error, timeout, cancellation, malformed and invalid responses | `tests/unit/api-client.test.ts` |
 | REST auth, surveys and submissions; idempotency header; no local fallback on server or network errors; 404 → null | `tests/unit/rest-repositories.test.ts` |
-| Env parsing and validation, release-build rules (explicit mode, https only); **mock mode makes zero network calls**; REST wiring | `tests/unit/container.test.ts` |
+| Env parsing and validation, release-build rules (no mock mode, https only); **mock mode makes zero network calls**; REST wiring | `tests/unit/container.test.ts` |
 | AuthProvider: restore, sign in and out, restore failure and retry, session expiry; `useSession` stays stable while a protected screen unmounts | `tests/unit/auth-context.test.tsx` |
 | Login form shows a form-level error for server field details it can't place; the submission-detail screen reports 401 so the user is signed out | `tests/unit/feature-hooks.test.tsx` |
 | End-to-end UI: splash routing, login errors and success, session restore, logout, restore failure and retry, validation messages, answer preservation, successful submit and summary, detail screen, restart shows "Submitted", **disabled submit and a single stored submission**, storage-failure retry, draft restore, draft flushed on unmount | `tests/integration/app-flow.test.tsx` |

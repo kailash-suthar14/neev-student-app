@@ -9,7 +9,16 @@ export interface AppConfig {
   dataMode: DataMode;
   api: { baseUrl: string; timeoutMs: number } | null;
   mock: { latencyMs: number; demoEmail: string; demoPassword: string };
+  /** Used in REST mode, where sign-in goes through Firebase Auth. */
+  firebase: { googleWebClientId: string };
 }
+
+/**
+ * OAuth web client (client_type 3) of Firebase project deeple-80bdf, from
+ * google-services.json. A public identifier, not a secret.
+ */
+const DEFAULT_GOOGLE_WEB_CLIENT_ID =
+  '865517437629-d4shk01d3it2im6u1p8mbl5l7od08thf.apps.googleusercontent.com';
 
 /** Treat unset and blank variables the same way. */
 const optional = <T extends z.ZodType>(schema: T) =>
@@ -18,12 +27,15 @@ const optional = <T extends z.ZodType>(schema: T) =>
 const envSchema = z
   .object({
     EXPO_PUBLIC_APP_NAME: optional(z.string().trim().min(1).default('Neev Survey')),
-    EXPO_PUBLIC_DATA_MODE: optional(z.enum(['mock', 'rest']).default('mock')),
+    EXPO_PUBLIC_DATA_MODE: optional(z.enum(['mock', 'rest']).default('rest')),
     EXPO_PUBLIC_API_BASE_URL: optional(z.url({ protocol: /^https?$/ }).optional()),
     EXPO_PUBLIC_API_TIMEOUT_MS: optional(z.coerce.number().int().min(1000).max(120000).default(15000)),
     EXPO_PUBLIC_MOCK_LATENCY_MS: optional(z.coerce.number().int().min(0).max(5000).default(400)),
     EXPO_PUBLIC_DEMO_EMAIL: optional(z.email().default('demo@example.com')),
     EXPO_PUBLIC_DEMO_PASSWORD: optional(z.string().min(1).default('Demo123!')),
+    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: optional(
+      z.string().trim().endsWith('.apps.googleusercontent.com').default(DEFAULT_GOOGLE_WEB_CLIENT_ID),
+    ),
   })
   .refine((env) => env.EXPO_PUBLIC_DATA_MODE !== 'rest' || env.EXPO_PUBLIC_API_BASE_URL, {
     message: 'EXPO_PUBLIC_API_BASE_URL is required when EXPO_PUBLIC_DATA_MODE=rest.',
@@ -46,11 +58,12 @@ export function readProcessEnv(): RawEnv {
     EXPO_PUBLIC_MOCK_LATENCY_MS: process.env.EXPO_PUBLIC_MOCK_LATENCY_MS,
     EXPO_PUBLIC_DEMO_EMAIL: process.env.EXPO_PUBLIC_DEMO_EMAIL,
     EXPO_PUBLIC_DEMO_PASSWORD: process.env.EXPO_PUBLIC_DEMO_PASSWORD,
+    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   };
 }
 
 export interface ParseOptions {
-  /** Development builds allow implicit mock mode and plain-http APIs. Defaults to `__DEV__`. */
+  /** Development builds allow plain-http APIs. Defaults to `__DEV__`. */
   isDev?: boolean;
 }
 
@@ -62,9 +75,9 @@ export function parseAppConfig(raw: RawEnv, { isDev = __DEV__ }: ParseOptions = 
   }
   const env = result.data;
   if (!isDev) {
-    // A release build must never fall back to the mock login by accident.
-    if (!raw.EXPO_PUBLIC_DATA_MODE?.trim()) {
-      throw new AppError('config', 'EXPO_PUBLIC_DATA_MODE must be set explicitly in release builds.');
+    // The demo login must never ship.
+    if (env.EXPO_PUBLIC_DATA_MODE === 'mock') {
+      throw new AppError('config', 'Mock mode is for development only; release builds use the real sign-in.');
     }
     // Credentials must not travel over cleartext HTTP outside development.
     if (env.EXPO_PUBLIC_API_BASE_URL?.startsWith('http:')) {
@@ -82,5 +95,6 @@ export function parseAppConfig(raw: RawEnv, { isDev = __DEV__ }: ParseOptions = 
       demoEmail: env.EXPO_PUBLIC_DEMO_EMAIL,
       demoPassword: env.EXPO_PUBLIC_DEMO_PASSWORD,
     },
+    firebase: { googleWebClientId: env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID },
   };
 }

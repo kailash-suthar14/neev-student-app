@@ -8,9 +8,12 @@ import {
 } from 'react';
 
 import { useAppServices } from '@/config/app-services';
-import { toAppError, type AppError } from '@/core/errors';
+import { AppError, getUserMessage, toAppError } from '@/core/errors';
 
 import type { AuthSession, LoginCredentials } from './models';
+
+const SESSION_EXPIRED_NOTICE = 'Your session has expired. Please sign in again.';
+const FORCED_SIGN_OUT_NOTICE = getUserMessage(new AppError('device_conflict', 'Signed in elsewhere.'));
 
 export type AuthState =
   | { status: 'restoring' }
@@ -22,6 +25,9 @@ export interface AuthContextValue {
   state: AuthState;
   /** Resolves on success; rejects with an AppError the caller can display. */
   signIn(credentials: LoginCredentials): Promise<void>;
+  /** Resolves without signing in when the user cancels the account picker. */
+  signInWithGoogle(): Promise<void>;
+  supportsGoogleSignIn: boolean;
   signOut(): Promise<void>;
   /** Called when the backend reports an expired session (HTTP 401). */
   expireSession(): void;
@@ -40,8 +46,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
     auth.restoreSession().then(
-      (session) => {
-        if (active) setState(session ? { status: 'signed_in', session } : { status: 'signed_out' });
+      async (session) => {
+        if (session) {
+          if (active) setState({ status: 'signed_in', session });
+          return;
+        }
+        const forced = await auth.consumeForcedSignOut().catch(() => false);
+        if (active) {
+          setState(forced ? { status: 'signed_out', notice: FORCED_SIGN_OUT_NOTICE } : { status: 'signed_out' });
+        }
       },
       (error: unknown) => {
         if (active) setState({ status: 'restore_failed', error: toAppError(error) });
@@ -60,6 +73,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [auth],
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    const session = await auth.loginWithGoogle();
+    if (session) setState({ status: 'signed_in', session });
+  }, [auth]);
+
   const signOut = useCallback(async () => {
     try {
       await auth.logout();
@@ -76,8 +94,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [auth]);
 
   const expireSession = useCallback(() => {
-    setState({ status: 'signed_out', notice: 'Your session has expired. Please sign in again.' });
-    auth.logout().catch(() => undefined);
+    setState({ status: 'signed_out', notice: SESSION_EXPIRED_NOTICE });
+    // A 401 may mean another device took over the account; explain that instead.
+    auth
+      .logout()
+      .catch(() => undefined)
+      .then(() => auth.consumeForcedSignOut())
+      .then(
+        (forced) => {
+          if (!forced) return;
+          setState((current) =>
+            current.status === 'signed_out' ? { status: 'signed_out', notice: FORCED_SIGN_OUT_NOTICE } : current,
+          );
+        },
+        () => undefined,
+      );
   }, [auth]);
 
   const retryRestore = useCallback(() => {
@@ -89,7 +120,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   return (
     <AuthContext
-      value={{ state, signIn, signOut, expireSession, retryRestore, continueSignedOut }}>
+      value={{
+        state,
+        signIn,
+        signInWithGoogle,
+        supportsGoogleSignIn: auth.supportsGoogleSignIn,
+        signOut,
+        expireSession,
+        retryRestore,
+        continueSignedOut,
+      }}>
       {children}
     </AuthContext>
   );
